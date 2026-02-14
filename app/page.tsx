@@ -15,7 +15,8 @@ export default function Home() {
 
   const caricaDati = async () => {
     try {
-      const { data: recs, error: err1 } = await supabase.from('diario').select('*').order('data', { ascending: false })
+      // Modifica 1: Ordinamento basato sulla colonna 'dati'
+      const { data: recs, error: err1 } = await supabase.from('diario').select('*').order('dati', { ascending: false })
       const { data: cant, error: err2 } = await supabase.from('cantieri').select('nome_cantiere')
       const { data: dip, error: err3 } = await supabase.from('dipendenti').select('*')
       
@@ -27,9 +28,10 @@ export default function Home() {
       if (cant) setCantieri(cant)
       if (dip) setDipendenti(dip)
     } catch (error) {
-      console.error("Errore generico:", error)
+      console.error("Errore generico durante il caricamento:", error)
     }
   }
+
   const eliminaRecord = async (id: number) => {
     if (!window.confirm("Eliminare questa registrazione?")) return
     const { error } = await supabase.from('diario').delete().eq('id', id)
@@ -134,7 +136,10 @@ export default function Home() {
             <tbody className="divide-y divide-slate-50">
               {datiFiltrati.map((r) => (
                 <tr key={r.id} className="hover:bg-slate-50/80 transition-all group">
-                  <td className="p-6 text-slate-500 text-sm font-medium">{new Date(r.data).toLocaleDateString('it-IT')}</td>
+                  <td className="p-6 text-slate-500 text-sm font-medium">
+                    {/* Modifica 2: Lettura dalla colonna 'dati' */}
+                    {r.dati ? new Date(r.dati).toLocaleDateString('it-IT') : '---'}
+                  </td>
                   <td className="p-6 font-bold text-slate-900 uppercase text-sm tracking-tight">{r.nome_dipendente}</td>
                   <td className="p-6 text-slate-400 text-sm italic">{r.nome_cantiere}</td>
                   <td className="p-6 text-center">
@@ -142,7 +147,7 @@ export default function Home() {
                   </td>
                   <td className="p-6 text-right">
                     <button onClick={() => eliminaRecord(r.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-slate-300 hover:text-red-500 p-2">
-                       🗑️
+                        🗑️
                     </button>
                   </td>
                 </tr>
@@ -161,4 +166,4 @@ export default function Home() {
       </nav>
     </main>
   )
-} 
+}
