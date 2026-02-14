@@ -12,9 +12,7 @@ export default function RiepilogoOre() {
   const [filtroMese, setFiltroMese] = useState('Tutti i mesi')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { 
-    caricaDati() 
-  }, [])
+  useEffect(() => { caricaDati() }, [])
 
   const caricaDati = async () => {
     try {
@@ -22,12 +20,9 @@ export default function RiepilogoOre() {
       const { data: reg } = await supabase.from('diario').select('*').order('dati', { ascending: false })
       const { data: dip } = await supabase.from('dipendenti').select('*').order('nome_dipendente')
       const { data: can } = await supabase.from('cantieri').select('*').order('nome_cantiere')
-      
       if (reg) setRegistrazioni(reg)
       if (dip) setDipendenti(dip)
       if (can) setCantieri(can)
-    } catch (error) {
-      console.error("Errore caricamento:", error)
     } finally {
       setLoading(false)
     }
@@ -37,16 +32,19 @@ export default function RiepilogoOre() {
     const nuovaOra = attuale + variazione
     if (nuovaOra < 0) return
     const { error } = await supabase.from('diario').update({ minerale: nuovaOra }).eq('id', id)
-    if (!error) {
-      setRegistrazioni(prev => prev.map(r => r.id === id ? { ...r, minerale: nuovaOra } : r))
-    }
+    if (!error) setRegistrazioni(prev => prev.map(r => r.id === id ? { ...r, minerale: nuovaOra } : r))
+  }
+
+  const eliminaRecord = async (id: number) => {
+    if (!confirm("Vuoi eliminare definitivamente questa riga?")) return
+    const { error } = await supabase.from('diario').delete().eq('id', id)
+    if (!error) setRegistrazioni(prev => prev.filter(r => r.id !== id))
   }
 
   const datiFiltrati = registrazioni.filter(r => {
     const matchPersona = filtroPersona === 'Tutti i Dipendenti' || r.nome_dipendente === filtroPersona
     const matchCantiere = filtroCantiere === 'Tutti i Cantieri' || r.nome_cantiere === filtroCantiere
-    const dataRecord = new Date(r.dati)
-    const meseRecord = dataRecord.toLocaleString('it-IT', { month: 'long' })
+    const meseRecord = new Date(r.dati).toLocaleString('it-IT', { month: 'long' })
     const matchMese = filtroMese === 'Tutti i mesi' || meseRecord.toLowerCase() === filtroMese.toLowerCase()
     return matchPersona && matchCantiere && matchMese
   })
@@ -68,55 +66,42 @@ export default function RiepilogoOre() {
           </div>
         </div>
 
+        {/* FILTRI */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Dipendente</label>
-            <select value={filtroPersona} onChange={e => setFiltroPersona(e.target.value)} className="w-full bg-slate-50 p-3 rounded-xl font-bold text-slate-700 outline-none border border-transparent focus:border-blue-200">
-              <option>Tutti i Dipendenti</option>
-              {dipendenti.map(d => <option key={d.id} value={d.nome_dipendente}>{d.nome_dipendente}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Cantiere</label>
-            <select value={filtroCantiere} onChange={e => setFiltroCantiere(e.target.value)} className="w-full bg-slate-50 p-3 rounded-xl font-bold text-slate-700 outline-none border border-transparent focus:border-blue-200">
-              <option>Tutti i Cantieri</option>
-              {cantieri.map(c => <option key={c.id} value={c.nome_cantiere}>{c.nome_cantiere}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase ml-1">Mese</label>
-            <select value={filtroMese} onChange={e => setFiltroMese(e.target.value)} className="w-full bg-slate-50 p-3 rounded-xl font-bold text-slate-700 outline-none border border-transparent focus:border-blue-200">
-              <option>Tutti i mesi</option>
-              {['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'].map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
+          <select value={filtroPersona} onChange={e => setFiltroPersona(e.target.value)} className="bg-slate-50 p-3 rounded-xl font-bold text-slate-700 outline-none border border-transparent focus:border-blue-200">
+            <option>Tutti i Dipendenti</option>
+            {dipendenti.map(d => <option key={d.id} value={d.nome_dipendente}>{d.nome_dipendente}</option>)}
+          </select>
+          <select value={filtroCantiere} onChange={e => setFiltroCantiere(e.target.value)} className="bg-slate-50 p-3 rounded-xl font-bold text-slate-700 outline-none border border-transparent focus:border-blue-200">
+            <option>Tutti i Cantieri</option>
+            {cantieri.map(c => <option key={c.id} value={c.nome_cantiere}>{c.nome_cantiere}</option>)}
+          </select>
+          <select value={filtroMese} onChange={e => setFiltroMese(e.target.value)} className="bg-slate-50 p-3 rounded-xl font-bold text-slate-700 outline-none border border-transparent focus:border-blue-200">
+            <option>Tutti i mesi</option>
+            {['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'].map(m => <option key={m} value={m}>{m}</option>)}
+          </select>
         </div>
 
+        {/* TABELLA RESPONSIVE */}
         <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <div className="min-w-[750px]">
-              <table className="w-full">
+            <div className="min-w-[800px]">
+              <table className="w-full text-left">
                 <thead>
                   <tr className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">
-                    <th className="px-6 py-4 text-left">Data</th>
-                    <th className="px-6 py-4 text-left">Dipendente</th>
-                    <th className="px-6 py-4 text-left">Cantiere</th>
+                    <th className="px-6 py-4">Data</th>
+                    <th className="px-6 py-4">Dipendente</th>
+                    <th className="px-6 py-4">Cantiere</th>
                     <th className="px-6 py-4 text-center">Ore</th>
                     <th className="px-6 py-4 text-right">Azione</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {datiFiltrati.map((r) => (
-                    <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4 text-xs font-bold text-slate-400">
-                        {new Date(r.dati).toLocaleDateString('it-IT')}
-                      </td>
-                      <td className="px-6 py-4 font-black text-slate-900 uppercase text-sm">
-                        {r.nome_dipendente}
-                      </td>
-                      <td className="px-6 py-4 text-slate-400 font-bold italic text-sm uppercase">
-                        {r.nome_cantiere}
-                      </td>
+                    <tr key={r.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-6 py-4 text-xs font-bold text-slate-400">{new Date(r.dati).toLocaleDateString('it-IT')}</td>
+                      <td className="px-6 py-4 font-black text-slate-900 uppercase text-sm">{r.nome_dipendente}</td>
+                      <td className="px-6 py-4 text-slate-400 font-bold italic text-sm uppercase">{r.nome_cantiere}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-3">
                           <button onClick={() => cambiaOre(r.id, r.minerale, -1)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-600 font-bold hover:bg-slate-200">-</button>
@@ -125,13 +110,13 @@ export default function RiepilogoOre() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        {/* Spazio azioni */}
+                        <button onClick={() => eliminaRecord(r.id)} className="text-slate-200 hover:text-red-500 p-2 transition-colors">🗑️</button>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {loading && <div className="p-10 text-center font-bold text-slate-300 animate-pulse uppercase text-xs">Caricamento...</div>}
+              {loading && <div className="p-10 text-center font-bold text-slate-300 animate-pulse uppercase text-xs">Sincronizzazione...</div>}
             </div>
           </div>
         </div>
