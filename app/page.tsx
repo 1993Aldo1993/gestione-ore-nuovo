@@ -14,14 +14,22 @@ export default function Home() {
   useEffect(() => { caricaDati() }, [])
 
   const caricaDati = async () => {
-    const { data: recs } = await supabase.from('diario').select('*').order('data', { ascending: false })
-    const { data: cant } = await supabase.from('cantieri').select('nome_cantiere')
-    const { data: dip } = await supabase.from('dipendenti').select('*')
-    if (recs) setRecords(recs)
-    if (cant) setCantieri(cant)
-    if (dip) setDipendenti(dip)
-  }
+    try {
+      const { data: recs, error: err1 } = await supabase.from('diario').select('*').order('data', { ascending: false })
+      const { data: cant, error: err2 } = await supabase.from('cantieri').select('nome_cantiere')
+      const { data: dip, error: err3 } = await supabase.from('dipendenti').select('*')
+      
+      if (err1 || err2 || err3) {
+        console.error("Errore Supabase:", err1 || err2 || err3)
+      }
 
+      if (recs) setRecords(recs)
+      if (cant) setCantieri(cant)
+      if (dip) setDipendenti(dip)
+    } catch (error) {
+      console.error("Errore generico:", error)
+    }
+  }
   const eliminaRecord = async (id: number) => {
     if (!window.confirm("Eliminare questa registrazione?")) return
     const { error } = await supabase.from('diario').delete().eq('id', id)
