@@ -7,9 +7,7 @@ export default function GestioneDipendenti() {
   const [dipendenti, setDipendenti] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    caricaDipendenti()
-  }, [])
+  useEffect(() => { caricaDipendenti() }, [])
 
   const caricaDipendenti = async () => {
     try {
@@ -18,89 +16,89 @@ export default function GestioneDipendenti() {
         .from('dipendenti')
         .select('*')
         .order('nome_dipendente', { ascending: true })
-      
       if (error) throw error
       setDipendenti(data || [])
     } catch (error) {
-      console.error("Errore caricamento dipendenti:", error)
+      console.error("Errore:", error)
     } finally {
       setLoading(false)
     }
   }
 
-  const formattaData = (data: string) => {
-    if (!data) return '---'
-    return new Date(data).toLocaleDateString('it-IT')
+  // FUNZIONE PER SALVARE OGNI MODIFICA IN TEMPO REALE
+  const aggiornaCampo = async (id: number, campo: string, valore: string) => {
+    const { error } = await supabase
+      .from('dipendenti')
+      .update({ [campo]: valore })
+      .eq('id', id)
+    
+    if (error) {
+      alert("Errore nel salvataggio: " + error.message)
+    } else {
+      setDipendenti(prev => prev.map(d => d.id === id ? { ...d, [campo]: valore } : d))
+    }
   }
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-800 p-6 pb-32">
       <div className="max-w-6xl mx-auto">
-        
-        {/* Intestazione */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900 italic">Gestione Personale</h1>
-          <p className="text-slate-500 font-medium tracking-tight">Anagrafica e scadenze documenti</p>
+          <p className="text-slate-500 font-medium tracking-tight">Modifica anagrafica e documenti</p>
         </div>
 
         {loading ? (
-          <div className="text-center py-20 text-slate-400 animate-pulse font-bold uppercase tracking-widest text-xs">
-            Caricamento database...
-          </div>
+          <div className="text-center py-20 text-slate-400 font-bold uppercase tracking-widest text-xs">Caricamento...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {dipendenti.map((d) => (
-              <div key={d.id} className="bg-white rounded-3xl p-6 shadow-xl shadow-slate-200/50 border border-slate-200 hover:border-blue-200 transition-colors">
+              <div key={d.id} className="bg-white rounded-3xl p-6 shadow-xl border border-slate-200">
                 <div className="flex justify-between items-start mb-6">
-                  <div>
-                    <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">{d.nome_dipendente}</h2>
-                    <p className="text-blue-600 font-bold text-sm">{d.telefono || 'Nessun numero salvato'}</p>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-black text-slate-900 uppercase mb-2">{d.nome_dipendente}</h2>
+                    <input 
+                      type="text" 
+                      placeholder="Telefono..."
+                      value={d.telefono || ''} 
+                      onChange={(e) => aggiornaCampo(d.id, 'telefono', e.target.value)}
+                      className="text-blue-600 font-bold text-sm bg-blue-50/50 px-3 py-1 rounded-lg w-full outline-none focus:ring-2 focus:ring-blue-200"
+                    />
                   </div>
-                  <div className="bg-slate-100 px-3 py-1 rounded-full text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    ID: {d.id}
-                  </div>
+                  <div className="bg-slate-100 px-3 py-1 rounded-full text-[10px] font-black text-slate-400">ID: {d.id}</div>
                 </div>
 
-                <div className="space-y-3">
-                  <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest border-b border-slate-50 pb-1">Scadenze Documenti</p>
-                  
+                <div className="space-y-4">
+                  <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest border-b pb-1">Documenti (Scadenze)</p>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Carta Identità</span>
-                      <span className="text-sm font-semibold text-slate-700">{formattaData(d.scadenza_ci)}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Permesso Sogg.</span>
-                      <span className="text-sm font-semibold text-slate-700">{formattaData(d.scadenza_permesso)}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Contratto</span>
-                      <span className="text-sm font-semibold text-slate-700">{formattaData(d.scadenza_contratto)}</span>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">Visita Medica</span>
-                      <span className="text-sm font-semibold text-slate-700">{formattaData(d.scadenza_visita)}</span>
-                    </div>
+                    {[
+                      { label: 'Carta Identità', key: 'scadenza_ci' },
+                      { label: 'Permesso Sogg.', key: 'scadenza_permesso' },
+                      { label: 'Contratto', key: 'scadenza_contratto' },
+                      { label: 'Visita Medica', key: 'scadenza_visita' }
+                    ].map((doc) => (
+                      <div key={doc.key} className="flex flex-col">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase mb-1">{doc.label}</span>
+                        <input 
+                          type="date" 
+                          value={d[doc.key] || ''} 
+                          onChange={(e) => aggiornaCampo(d.id, doc.key, e.target.value)}
+                          className="text-xs font-semibold text-slate-700 bg-slate-50 p-2 rounded-lg border border-slate-100 outline-none focus:border-blue-300"
+                        />
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
             ))}
           </div>
         )}
-
-        {dipendenti.length === 0 && !loading && (
-          <div className="bg-white rounded-3xl p-12 text-center border-2 border-dashed border-slate-200">
-            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Nessun dipendente trovato nel database</p>
-          </div>
-        )}
       </div>
 
-      {/* Navigazione Bottom */}
-      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-lg bg-white/90 backdrop-blur-xl border border-slate-200 p-3 rounded-3xl flex justify-around items-center z-50 shadow-2xl shadow-slate-300/50">
-        <Link href="/" className="text-slate-400 font-bold text-[10px] uppercase tracking-tighter">Riepilogo</Link>
-        <Link href="/calendario" className="text-slate-400 font-bold text-[10px] uppercase tracking-tighter">Calendario</Link>
-        <Link href="/nuovo-inserimento" className="bg-slate-900 text-white px-6 py-2.5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-lg active:scale-95 transition-transform">+ Aggiungi</Link>
-        <Link href="/gestione" className="text-blue-600 font-extrabold text-[10px] uppercase tracking-tighter">Gestione</Link>
+      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-lg bg-white/90 backdrop-blur-xl border border-slate-200 p-3 rounded-3xl flex justify-around items-center z-50 shadow-2xl">
+        <Link href="/" className="text-slate-400 font-bold text-[10px] uppercase">Riepilogo</Link>
+        <Link href="/calendario" className="text-slate-400 font-bold text-[10px] uppercase">Calendario</Link>
+        <Link href="/nuovo-inserimento" className="bg-slate-900 text-white px-6 py-2.5 rounded-2xl font-black text-[10px] uppercase">+ Aggiungi</Link>
+        <Link href="/gestione" className="text-blue-600 font-extrabold text-[10px] uppercase">Gestione</Link>
       </nav>
     </main>
   )
